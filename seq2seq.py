@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.layers import LSTM, Dense, Input, RepeatVector, TimeDistributed 
+from tensorflow.keras.layers import LSTM, Dense, Input, RepeatVector, TimeDistributed, SimpleRNN 
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 
@@ -33,8 +33,11 @@ plt.plot(data['Date'],data['Close'])
 plt.xticks(rotation=45)
 plt.yticks(rotation=45)
 plt.xlabel("Date")
-plt.ylabel("Price")
+plt.ylabel("Price($)")
 plt.title("SPX Price between 2010/1-2025/3")
+plt.grid(visible=True, axis='both')
+plt.minorticks_on()
+plt.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
 plt.show()
 
 # Normalize price data
@@ -68,10 +71,12 @@ def LSTMEncoder_Decoder(epochs, batch_size, X_train, y_train, X_test, y_test) :
 
     # Encoder
     encoder_inputs = Input(shape=(past_days, 1))
+    encoder = tf.keras.layers.LSTM(latent_dim, activation="relu", return_sequences=True)(encoder_inputs)
     encoder = tf.keras.layers.LSTM(latent_dim, activation="relu", return_sequences=False)(encoder_inputs)
     encoded = RepeatVector(future_days)(encoder)
 
     # Decoder
+    decoder = tf.keras.layers.LSTM(latent_dim, activation="relu", return_sequences=True)(encoded)
     decoder = tf.keras.layers.LSTM(latent_dim, activation="relu", return_sequences=True)(encoded)
     decoder_outputs = TimeDistributed(Dense(1))(decoder)
 
@@ -88,11 +93,12 @@ def LSTMEncoder_Decoder(epochs, batch_size, X_train, y_train, X_test, y_test) :
 
 def LSTM(epochs, batch_size, X_train, y_train, X_test, y_test) :
        
-    latent_dim = 50
+    latent_dim = 100
 
     model = Sequential([
         tf.keras.layers.LSTM(latent_dim, activation="relu", input_shape=(past_days, 1), return_sequences=True),
         tf.keras.layers.LSTM(latent_dim, activation="relu", input_shape=(latent_dim, 1), return_sequences=False),
+        Dense(50, activation="relu"),
         Dense(25, activation="relu"),
         Dense(future_days) #
     ])
@@ -104,13 +110,27 @@ def LSTM(epochs, batch_size, X_train, y_train, X_test, y_test) :
 
     return history, model
  
-
-def calculate_Error(y_acc, y_pred) :
-    return np.mean(((y_acc - y_pred)** 2))
+def rnn(epochs, batch_size, X_train, y_train, X_test, y_test) :
+    model = Sequential([
+        SimpleRNN(100, activation='relu', input_shape=(past_days, 1), return_sequences=False),
+        Dense(50, activation='relu'),
+        Dense(25, activation='relu'),
+        Dense(future_days)  # This outputs a vector of length future_days
+    ])
+    model.compile(optimizer='adam', loss='mse')
+    history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data=(X_test, y_test))
+    return history, model
     
 
+def calculate_mae(y_acc, y_pred) :
+    return np.mean((np.abs(y_acc - y_pred)))
+
+def calculate_mse(y_acc, y_pred) :
+    return np.mean((np.square(y_acc - y_pred)))
+
+
 ##### main function starts here
-EPOCHS=10
+EPOCHS=100
 BATCH_SIZE=64
 SetModel = 'LSTM' if past_days == future_days else 'LSTMEncoder_Decoder'
 history = None
@@ -120,6 +140,9 @@ if SetModel == 'LSTMEncoder_Decoder' :
     history, model = LSTMEncoder_Decoder(EPOCHS, BATCH_SIZE, X_train, y_train, X_test, y_test)
 elif SetModel == 'LSTM' :
     history, model = LSTM(EPOCHS, BATCH_SIZE, X_train, y_train, X_test, y_test)
+elif SetModel == 'RNN' :
+    history, model = rnn(EPOCHS, BATCH_SIZE, X_train, y_train, X_test, y_test)
+    
 
 model.summary()
 
@@ -136,10 +159,17 @@ print(f"Date: {data['Date'].shape}")
 dates = data['Date'][:-past_days]
 print(f"dates: {dates.shape}")
 print(f"last date: {data['Date'].iloc[-1]}")
+lastDate = dates.iloc[-1]
 ## shift dates by 5 days right
-dates = pd.concat([pd.Series([None] * past_days), dates.iloc[:-past_days]]).reset_index(drop=True)
+last_days = pd.date_range(start=lastDate+pd.Timedelta(days=1), periods=future_days, freq='D')
+last_days = pd.Series(last_days)
+#dates = pd.concat([pd.Series([None] * past_days), dates.iloc[:-past_days]]).reset_index(drop=True)
+#dates = pd.concat((dates, np.array(last_days)), axis=0)
+dates = pd.concat([dates, last_days], ignore_index=True)
+print(f"dates: {dates.shape}")
 
-
+mae = 0
+mse = 0
 # lastPred= y_pred_rescaled[-1]
 # firsPred= y_pred_rescaled[0]
 
@@ -157,13 +187,15 @@ y_pred_final = None
 if SetModel == 'LSTMEncoder_Decoder' :
     # Predict future all date
     y_pred = model.predict(X_all)
+    y_shift = [y_pred[0] for i in range(past_days)]
+    y_pred = np.concatenate((y_shift, y_pred), axis = 0)
 
     # remove the first past_days no predicition 
     y_original = data_scaled[past_days:]
     # remove the last future_days, no prediction
-    y_original = y_original[:-future_days]
-    mse = calculate_Error(y_original, y_pred[:,0])
-    print(f"MSE: {mse}")
+    #y_original = y_original[:-future_days]
+    #mse = calculate_mse(y_original, y_pred[:,0])
+    #print(f"MSE: {mse}")
 
     # # Inverse transform predictions. LSTMEncoder_Decoder model returns array in shape [x,5,1]
     y_pred_rescaled = scaler.inverse_transform(y_pred.reshape(-1, 1)).reshape(y_pred.shape)
@@ -184,17 +216,29 @@ if SetModel == 'LSTMEncoder_Decoder' :
     
     #print(f"y_pred_rescaled: {y_pred_rescaled.shape}")
     y_pred_final = y_pred_rescaled[:,0]
+    # calculate actual error
+    print(f"pred_final: {y_pred_final.flatten().shape}")
+    print(f"original: {data['Close'].values.flatten().shape}")
+    mse = calculate_mse(np.array(data['Close'].values.flatten()), np.array(y_pred_final.flatten()))
+    mae = calculate_mae(np.array(data['Close'].values.flatten()), np.array(y_pred_final.flatten()))
+    print(f"MSE: {mse}")
+    print(f"MAE: {mae}")
+    
 
-elif SetModel == 'LSTM' :  
+
+elif SetModel == 'LSTM' or SetModel == 'RNN' :  
     # the LSTM model returns prediction in shape [x,future_days]
     y_pred = model.predict(X_all)
-    
+    y_shift = [y_pred[0] for i in range(past_days)]
+    y_pred = np.concatenate((y_shift, y_pred), axis = 0)
+
     # remove the first past_days no predicition 
     y_original = data_scaled[past_days:]
     # remove the last future_days, no prediction
     y_original = y_original[:-future_days]
-    mse = calculate_Error(y_original, y_pred[:,0])
-    print(f"MSE: {mse}")
+    # calculate error using nomalized data
+    #mse = calculate_mse(y_original, y_pred[:,0])
+    #print(f"MSE: {mse}")
 
     y_pred_rescaled = scaler.inverse_transform(y_pred.reshape(-1, 1)).reshape(y_pred.shape)
 
@@ -211,6 +255,12 @@ elif SetModel == 'LSTM' :
 
     y_pred_rescaled = np.concatenate((y_pred_rescaled, pred_last), axis = 0)    
     y_pred_final = y_pred_rescaled[:,0]
+    # calculate error using original data
+    mse = calculate_mse(data['Close'], y_pred_final)
+    mae = calculate_mae(data['Close'], y_pred_final)
+    print(f"MSE: {mse}")
+    print(f"MAE: {mae}")
+
 
 #y_test_rescaled = scaler.inverse_transform(y_test.reshape(-1, 1)).reshape(y_test.shape)
 
@@ -222,7 +272,10 @@ plt.plot(dates, y_pred_final, linestyle="-", label="Predicted Price")
 plt.xticks(rotation=45)
 plt.yticks(rotation=45)
 plt.xlabel("Date")
-plt.ylabel("Price")
+plt.ylabel("Price($)")
 plt.legend()
-plt.title("SPX Price Prediction (Next 5 Days)")
+plt.title(f"SPX Price Prediction (Predicated by next {future_days} Days Model: {SetModel}, mae {mae:.2f}$)")
+plt.grid(visible=True, axis='both')
+plt.minorticks_on()
+plt.grid(which='minor', linestyle=':', linewidth='0.5', color='black')
 plt.show()
