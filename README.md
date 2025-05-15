@@ -43,7 +43,7 @@ Compare the predicted price and the actual price.
 
 |Indicator |Value|Comment|
 |----------|-----|-------|
-|MAE |2772.1780303868577| No improved|
+|MAE |2772.1780303868577| Not improved|
 |MSE |9401672.35340898 | Too big |
 
 # Stacked 
