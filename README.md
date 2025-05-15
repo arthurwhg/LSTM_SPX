@@ -3,10 +3,8 @@
 -	The project is considering leveraging a deep learning models (Sequence to Sequence Neural networks) to predict the stock price in the future days.
 -	There could be multiple factors impacting the daily stock price, such as marco economics, subject motions etc. 
 
-
 ## data set
 SPX historic data can be downloaded form yahoo finance. It has history data since year 1927. Considered the correlation of the economic environment, This project initialy picked up the daily price data between year 2010 and 3/20/2025.
-
 
   ![alt text](pics/data-origin.png)
 
@@ -33,7 +31,6 @@ Compare the predicted price and the actual price.
 |MAE|2772.1591441795117| Not good|
 |MSE|9401551.0633827040| Too big|
 
-
 # RNN
 ## Model
 ![alt text](pics/RNN-model.png)
@@ -48,7 +45,6 @@ Compare the predicted price and the actual price.
 |----------|-----|-------|
 |MAE |2772.1780303868577| No improved|
 |MSE |9401672.35340898 | Too big |
-
 
 # Stacked 
 # Model
