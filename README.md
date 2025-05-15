@@ -16,13 +16,13 @@ SPX historic data can be downloaded form yahoo finance. It has history data sinc
 
 
 # LTSM model
-## model
+## Model
  ![alt text](pics/LTSM-model.png)
 
 ## Loss & Metrics (MAE)
  ![alt text](pics/LTSM-Loss-metrics.png)
 
-## validation
+## Validation
  ![alt text](pics/LTSM-validation.png)
 
 Compare the predicted price and the actual price. 
@@ -38,7 +38,7 @@ Compare the predicted price and the actual price.
 ## Traing
 ![alt text](pics/Rnn-loss-metrics.png)
 
-## validation
+## Validation
 ![alt text](pics/Rnn-validation.png)
 
 |Indicator |Value|Comment|
