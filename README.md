@@ -32,39 +32,36 @@ Compare the predicted price and the actual price.
 |---------|---------|-------|
 |MAE|2772.1591441795117| Not good|
 |MSE|9401551.0633827040| Too big|
-|
 
 
 # RNN
 ## Model
-![alt text](pics/RNN-model.png)]
+![alt text](pics/RNN-model.png)
 
 ## Traing
 ![alt text](pics/Rnn-loss-metrics.png)
 
 ## validation
-![alt text](pics/Rnn-validation.png)]
+![alt text](pics/Rnn-validation.png)
 
 |Indicator |Value|Comment|
 |----------|-----|-------|
 |MAE |2772.1780303868577| No improved|
 |MSE |9401672.35340898 | Too big |
-|
 
 
 # Stacked 
 # Model
-![alt text](pics/stacked-model.png)]
+![alt text](pics/Stacked-model.png)
 
 # Traing
-![alt text](pics/stacked-loss-metrics.png)
+![alt text](pics/Stacked-loss-metrics.png)
 
 # Validation
-![alt text](pics/stacked-validation.png)
+![alt text](pics/Stacked-validation.png)
 
 |Indicator	|Value	|Comment|
 |----------|-----|-------|
 |MAE	|30.111811640584918	|improved|
 |MSE	|1806.8682086366314	|Still big|
-|
 
