@@ -1,4 +1,4 @@
-# Abtout
+# About
 -	Finance stock market generates trading data every day. 
 -	The project is considered leveraging a deep learning models to predict the stock price in the future days.
 -	There could be multiple factors impacting the daily stock price, such as marco economics, subject motions etc. 
