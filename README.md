@@ -22,7 +22,7 @@ SPX historic data can be downloaded form yahoo finance. It has history data sinc
  ![alt text](pics/LTSM-model.png)
 
 ## Loss & Metrics (MAE)
- ![alt text](pics/LTSM-loss-metrics.png)
+ ![alt text](pics/LTSM-Loss-metrics.png)
 
 ## validation
  ![alt text](pics/LTSM-validation.png)
