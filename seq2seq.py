@@ -32,7 +32,7 @@ print(data.head())
 print(data.head(-5))
 
 plt.figure(figsize=(20,5))
-plt.plot(data['Date'],data['Close'])
+plt.plot(data['Date'],data['Close'], label="original data")
 plt.xticks(rotation=45)
 plt.yticks(rotation=45)
 plt.xlabel("Date")
@@ -89,8 +89,14 @@ def create_sequences(data, date, past_days, future_days):
 # create a date list for all predicted data for plot 
 def createDates(date_list, original_dates, past_days,future_days) :
     quotient, mod = divmod(len(original_dates), past_days)
-    dates = original_dates[0:quotient * past_days].to_numpy()
-    lastDates = dates[-mod:]
+    #dates = original_dates[0:(quotient * past_days -mod)].to_numpy()
+    dates = []
+    for i in range(len(date_list)):
+        for j in range(past_days):  
+            dates.append(date_list[i][j])
+
+    lastDates = np.array([date for date in original_dates[-mod:]])
+        
     dates = np.append(dates,lastDates)
 
     #lastDate = dates[len(dates)-1]
@@ -143,17 +149,17 @@ def LSTMEncoder_Decoder(epochs, batch_size, X_train, y_train, X_test, y_test, pa
 # model of LSTM on LSTM
 def LSTM(epochs, batch_size, X_train, y_train, X_test, y_test, past_days, future_days) :
        
-    latent_dim = 100
+    latent_dim = 50
 
     model = Sequential([
         tf.keras.layers.LSTM(latent_dim, activation="relu", input_shape=(past_days, 1), return_sequences=True),
-        tf.keras.layers.LSTM(latent_dim, activation="relu", input_shape=(latent_dim, 1), return_sequences=True),
+        tf.keras.layers.LSTM(latent_dim, activation="relu", input_shape=(latent_dim, 1), return_sequences=False),
         Dense(50, activation="relu"),
         Dense(25, activation="relu"),
         Dense(future_days) #
     ])
     
-    model.compile(optimizer="adam", loss="mse",metrics=['accuracy'])
+    model.compile(optimizer="adam", loss="mse",metrics=['mae'])
     # Train model
     with tf.device('/gpu:0'):
       history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data=(X_test, y_test))
@@ -168,7 +174,7 @@ def rnn(epochs, batch_size, X_train, y_train, X_test, y_test, past_days, future_
         Dense(50, activation='relu'),
         Dense(future_days)  # This outputs a vector of length future_days
     ])
-    model.compile(optimizer='adam', loss='mse',metrics=['accuracy'])
+    model.compile(optimizer='adam', loss='mse',metrics=['mae'])
     # Train model
     with tf.device('/gpu:0'):
        history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data=(X_test, y_test))
@@ -197,7 +203,7 @@ def stack(epochs, batch_size, X_train, y_train, X_test, y_test, past_days, futur
         Dense(future_days) #
     ])
     
-    model.compile(optimizer="adam", loss="mse", metrics=['accuracy'])
+    model.compile(optimizer="adam", loss="mse", metrics=['mae'])
     # Train model
     with tf.device('/gpu:0'):
       history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data=(X_test, y_test))
@@ -222,14 +228,14 @@ def showLossandAccuracyPlot(history):
     ax[0].plot(history.history['loss'], label='Training Loss')
     ax[0].plot(history.history['val_loss'], label='Validation Loss')
 
-    ax[1].set_title('Training and Validation Accuracy')
-    ax[1].plot(history.history['accuracy'], label='Training Accuracy')
-    ax[1].plot(history.history['val_accuracy'], label='Validation Accuracy')
+    ax[1].set_title('Training and Validation MAE')
+    ax[1].plot(history.history['mae'], label='Training MAE')
+    ax[1].plot(history.history['val_mae'], label='Validation MAE')
     ax[1].set_xlabel('Epochs')
     ax[1].set_ylabel('Loss')
     ax[1].set_ylabel('Loss')
     ax[1].set_xlabel('Epochs')
-    ax[1].legend()
+    ax[1].legend(loc="upper left")
     plt.tight_layout()
     plt.show()
 
@@ -310,8 +316,8 @@ def showPredictionandAccutual(dates, y_pred_final, date_actual, y_actual, mae, m
 
     # Plot actual vs predicted prices
     plt.figure(figsize=(16,9))
-    plt.plot(dates, y_actual, label="Actual Price")
-    plt.plot(dates, y_pred_final, linestyle="-", label="Predicted Price")
+    plt.plot(date_actual, y_actual, label="Actual Price")
+    plt.plot(date_actual, y_pred_final, linestyle="-", label="Predicted Price")
     #plt.plot(dates, data_scaled, label="Predicted Price (Next Day)")
     plt.xticks(rotation=45)
     plt.yticks(rotation=45)
@@ -354,7 +360,7 @@ def showDataArray(X, y, x_original, y_original, dates, dates_original):
 ##### main function starts here
 EPOCHS=60
 BATCH_SIZE=32
-SetModel = 'STACK' #if past_days == future_days else 'LSTMEncoder_Decoder'
+SetModel = 'RNN' #if past_days == future_days else 'LSTMEncoder_Decoder'
 history = None
 model = None
 mae = 0
@@ -415,6 +421,8 @@ elif SetModel == 'RNN' :
     mse = calculate_mse(data['Close'], y_pred_final)
     y_pred_rescaled = inverseTransform(y_pred_final, scaler)
     showLossandAccuracyPlot(history)
+    print(f"mae: {mae} mse:{mse}")
+    model.summary()
     showPredictionandAccutual(dates, y_pred_rescaled, data['Date'], data['Close'], mae, mse)     
 
 elif SetModel == 'STACK' :
@@ -427,6 +435,7 @@ elif SetModel == 'STACK' :
     mae = calculate_mae(data['Close'], y_pred_rescaled)
     mse = calculate_mse(data['Close'], y_pred_rescaled)
     showLossandAccuracyPlot(history)
+    print(f"mae: {mae} mse:{mse}")
     model.summary()
     #showData(data['Close'], y_pred_rescaled, dates)
     showPredictionandAccutual(dates, y_pred_rescaled, data['Date'], data['Close'], mae, mse)     

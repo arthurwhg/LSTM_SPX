@@ -1,4 +1,4 @@
-# Abtou the project
+# Abtout
 -	Finance stock market generates trading data every day. 
 -	The project is considering leveraging a deep learning models (Sequence to Sequence Neural networks) to predict the stock price in the future days.
 -	There could be multiple factors impacting the daily stock price, such as marco economics, subject motions etc. 
@@ -55,7 +55,7 @@ Compare the predicted price and the actual price.
 ![alt text](pics/Stacked-model.png)
 
 # Traing
-![alt text](pics/Stacked-loss-metrics.png)
+![alt text](pics/Stacked-Loss-metrics.png)
 
 # Validation
 ![alt text](pics/Stacked-validation.png)
